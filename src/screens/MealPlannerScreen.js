@@ -2,13 +2,13 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, Platform } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 
-// Importer le composant de planification (inchangé ici)
+// Importer le composant de planification
 import MealPlanner from '../components/planning/MealPlanner';
 
 function MealPlannerScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
         <View style={styles.headerContainer}>
           {/* Icône du calendrier avec la couleur accentuée */}
           <FontAwesome name="calendar" size={32} color={styles.ACCENT_RED} />
@@ -28,38 +28,43 @@ const styles = StyleSheet.create({
   ACCENT_GREEN: '#007A5E',       // Vert foncé, vif
   ACCENT_RED: '#CE1126',         // Rouge vif
   ACCENT_YELLOW: '#FCD116',      // Jaune vif
-  
+
   BACKGROUND_PRIMARY: '#FFFFFF',    // Blanc pur pour les éléments principaux (cartes, etc.)
-  BACKGROUND_SECONDARY: '#F8F8F8', // Gris très très clair, presque blanc (pour le fond général de la page)
-  
-  BORDER_LIGHT: '#E0E0E0',      // Gris très clair pour les bordures légères
-  BORDER_MEDIUM: '#C0C0C0',     // Gris clair pour les bordures moyennes
-  
-  TEXT_PRIMARY: '#333333',       // Gris très foncé pour le texte principal
-  TEXT_SECONDARY: '#666666',     // Gris moyen pour le texte secondaire
-  
+  // Nouvelle couleur de fond pour les écrans
+  SCREEN_BACKGROUND: '#EEF7F4', // Le vert très clair de HomeScreen (et maintenant partout)
+
+  BORDER_LIGHT: '#E0E0E0',        // Gris très clair pour les bordures légères
+  BORDER_MEDIUM: '#C0C0C0',       // Gris clair pour les bordures moyennes
+
+  TEXT_PRIMARY: '#333333',         // Gris très foncé pour le texte principal
+  TEXT_SECONDARY: '#666666',      // Gris moyen pour le texte secondaire
+
   // --- Styles spécifiques à l'écran MealPlannerScreen (adaptés de FamilyScreen) ---
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8F8F8', // BACKGROUND_SECONDARY
+    backgroundColor: '#EEF7F4', // Applique le fond vert clair ici
     paddingTop: Platform.OS === 'android' ? 30 : 0,
   },
   container: {
     flex: 1,
+    backgroundColor: '#EEF7F4', // Applique le fond vert clair ici aussi
+    // padding: 20, // Retiré d'ici pour être mis dans contentContainerStyle
+  },
+  contentContainer: { // Ajout pour gérer le padding de la ScrollView
     padding: 20,
-    backgroundColor: '#F8F8F8', // BACKGROUND_SECONDARY
+    paddingBottom: 40, // Ajoute un peu de marge en bas
   },
   headerContainer: {
-    flexDirection: 'row', // Aligner icône et texte sur la même ligne
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 30, // Espace sous l'en-tête
+    marginBottom: 30,
     paddingVertical: 10,
   },
   title: {
-    fontSize: 32, // Grande taille pour le titre, cohérent avec les autres écrans
+    fontSize: 32,
     fontWeight: 'bold',
-    marginLeft: 15, // Espace entre l'icône et le texte
+    marginLeft: 15,
     color: '#333333', // TEXT_PRIMARY pour un titre sobre
     textShadowColor: 'rgba(0, 0, 0, 0.05)',
     textShadowOffset: { width: 1, height: 1 },
@@ -68,7 +73,7 @@ const styles = StyleSheet.create({
   contentSection: {
     flex: 1,
     paddingHorizontal: 5,
-    marginTop: 0, // Pas besoin de marge supplémentaire ici si le marginBottom du header est suffisant
+    marginTop: 0,
   },
 });
 

@@ -302,21 +302,39 @@ function AddDishForm() {
   );
 }
 
+const ACCENT_GREEN = '#007A5E';
+const ACCENT_RED = '#CE1126';
+const ACCENT_RED_LIGHT = '#F8D7DA';
+const ACCENT_RED_DARK = '#721c24';
+const ACCENT_YELLOW = '#FCD116';
+
+const BACKGROUND_PRIMARY = '#FFFFFF';
+const BACKGROUND_SECONDARY = '#F8F8F8';
+
+const BORDER_LIGHT = '#E0E0E0';
+const BORDER_MEDIUM = '#C0C0C0';
+
+const TEXT_PRIMARY = '#333333';
+const TEXT_SECONDARY = '#666666';
+
+
 const styles = StyleSheet.create({
+  // --- Palette de Couleurs (elles peuvent être définies ici aussi, mais il est plus courant de les mettre en dehors pour éviter le problème "undefined") ---
+  // TEXT_PRIMARY: '#333333', // Ceci causerait le problème si utilisé comme styles.TEXT_PRIMARY plus bas
+
   container: {
-    // flex: 1, // Retiré car le parent (ScrollView) gère le flex
     padding: 15,
-    backgroundColor: 'transparent', // Le fond est géré par l'écran parent
+    backgroundColor: 'transparent',
   },
   formTitle: {
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
     textAlign: 'center',
-    color: '#343a40',
+    color: TEXT_PRIMARY, // Utilisez la constante directement ici
   },
   errorMessage: {
-    color: 'red',
+    color: ACCENT_RED, // Utilisez la constante directement ici
     marginBottom: 15,
     textAlign: 'center',
     fontSize: 14,
@@ -327,17 +345,17 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     marginBottom: 5,
-    color: '#495057',
+    color: TEXT_PRIMARY, // Utilisez la constante directement ici
     fontWeight: '500',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: BORDER_LIGHT, // Utilisez la constante directement ici
     borderRadius: 5,
     paddingHorizontal: 10,
-    paddingVertical: 10, // Augmenté légèrement pour un meilleur toucher
+    paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND_PRIMARY, // Utilisez la constante directement ici
   },
   textarea: {
     height: 100,
@@ -345,37 +363,31 @@ const styles = StyleSheet.create({
   },
   gridContainer: {
     flexDirection: 'row',
-    // justifyContent: 'space-between', // Retiré, flex: 1 sur les items suffit
-    marginBottom: 15, // Ajouté pour espacer de l'élément suivant
+    marginBottom: 15,
   },
   gridItem: {
-      flex: 1, // Chaque item prend la moitié de l'espace disponible
-      marginHorizontal: 5, // Ajoute un petit espace entre les deux items
+      flex: 1,
+      marginHorizontal: 5,
   },
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: BORDER_LIGHT, // Utilisez la constante directement ici
     borderRadius: 5,
-    backgroundColor: '#fff',
-    // height: 50, // Hauteur fixe retirée pour plus de flexibilité
+    backgroundColor: BACKGROUND_PRIMARY, // Utilisez la constante directement ici
     justifyContent: 'center',
   },
-  // pickerContainerIngredient a été fusionné avec pickerContainer
   picker: {
-    // height: 50, // Hauteur fixe retirée
     width: '100%',
-    // On peut ajouter un padding interne si nécessaire sur certaines plateformes
-    // paddingVertical: Platform.OS === 'ios' ? 10 : 0,
   },
   imagePickerButton: {
-    backgroundColor: '#007bff',
-    padding: 12, // Légèrement plus grand
+    backgroundColor: ACCENT_GREEN, // Utilisez la constante directement ici
+    padding: 12,
     borderRadius: 5,
     alignItems: 'center',
     marginBottom: 10,
   },
   imagePickerButtonText: {
-    color: '#fff',
+    color: BACKGROUND_PRIMARY, // Utilisez la constante directement ici
     fontSize: 16,
     fontWeight: '500',
   },
@@ -385,50 +397,50 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: BORDER_LIGHT, // Utilisez la constante directement ici
     borderRadius: 5,
-    alignSelf: 'center', // Centrer l'image si elle est plus petite que la largeur
+    alignSelf: 'center',
   },
   ingredientsSection: {
     marginTop: 20,
     marginBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: '#eee',
+    borderTopColor: BORDER_LIGHT, // Utilisez la constante directement ici
     paddingTop: 15,
   },
   ingredientsTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 15, // Augmenté l'espace
-    color: '#343a40',
+    marginBottom: 15,
+    color: TEXT_PRIMARY, // Utilisez la constante directement ici
   },
   ingredientItem: {
     marginBottom: 15,
-    padding: 12, // Légèrement plus de padding
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#e9ecef',
+    borderColor: BORDER_LIGHT, // Utilisez la constante directement ici
     borderRadius: 5,
-    backgroundColor: '#fff',
+    backgroundColor: BACKGROUND_PRIMARY, // Utilisez la constante directement ici
   },
   ingredientInput: {
-    marginBottom: 8, // Espace cohérent entre les champs d'un ingrédient
+    marginBottom: 8,
   },
   ingredientRow: {
       flexDirection: 'row',
-      marginBottom: 8, // Espace après la ligne qté/unité
+      marginBottom: 8,
   },
   ingredientInputQty: {
-      flex: 1, 
-      marginRight: 4, // Réduit l'espace
+      flex: 1,
+      marginRight: 4,
   },
   ingredientInputUnit: {
       flex: 1,
-      marginLeft: 4, // Réduit l'espace
+      marginLeft: 4,
   },
-  ingredientPickerMargin: { // Ajoute une marge au conteneur Picker des ingrédients
+  ingredientPickerMargin: {
       marginBottom: 8,
   },
-  ingredientPriceMargin: { // Ajoute une marge au champ prix
+  ingredientPriceMargin: {
       marginBottom: 8,
   },
   removeButton: {
@@ -437,12 +449,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
     padding: 8,
-    backgroundColor: '#f8d7da',
+    backgroundColor: ACCENT_RED_LIGHT, // Utilisez la constante directement ici
     borderRadius: 5,
-    alignSelf: 'flex-end', // Aligner à droite
+    alignSelf: 'flex-end',
   },
   removeButtonText: {
-    color: '#721c24',
+    color: ACCENT_RED_DARK, // Utilisez la constante directement ici
     marginLeft: 5,
     fontWeight: 'bold',
   },
@@ -450,13 +462,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#28a745',
+    backgroundColor: ACCENT_GREEN, // Utilisez la constante directement ici
     padding: 12,
     borderRadius: 5,
     marginTop: 10,
   },
   addButtonText: {
-    color: '#fff',
+    color: BACKGROUND_PRIMARY, // Utilisez la constante directement ici
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 5,
@@ -465,17 +477,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007bff',
+    backgroundColor: ACCENT_GREEN, // Utilisez la constante directement ici
     padding: 15,
     borderRadius: 5,
-    marginTop: 20, // Augmenté l'espace avant le bouton final
-    marginBottom: 30, // Espace en bas pour le défilement
+    marginTop: 20,
+    marginBottom: 30,
   },
   submitButtonDisabled: {
-    backgroundColor: '#6c757d',
+    backgroundColor: TEXT_SECONDARY, // Utilisez la constante directement ici
   },
   submitButtonText: {
-    color: '#fff',
+    color: BACKGROUND_PRIMARY, // Utilisez la constante directement ici
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
