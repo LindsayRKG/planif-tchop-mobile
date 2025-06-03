@@ -1,7 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, Platform, Button } from 'react-native'; // Import Button
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 
 function HomeScreen() {
+  const navigation = useNavigation(); // Get navigation object
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
@@ -14,6 +17,15 @@ function HomeScreen() {
           Organisez facilement vos repas, gérez vos plats, vos ingrédients,
           et planifiez les menus pour toute la famille.
         </Text>
+
+        {/* Ajouter le bouton de navigation vers la liste de courses */}
+        <View style={styles.buttonContainer}>
+          <Button
+            title="🛒 Voir ma Liste de Courses"
+            onPress={() => navigation.navigate('Courses')} // Navigate to the 'Courses' tab
+            color={styles.CAM_GREEN} // Use a theme color
+          />
+        </View>
 
         <View style={styles.footerContainer}>
           <Text style={styles.footerTextPrimary}>Saveurs & Partage</Text>
@@ -80,8 +92,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#343a40', // Gris foncé pour le texte descriptif
     lineHeight: 26,
-    marginBottom: 40,
+    marginBottom: 30, // Réduire un peu l'espace pour le bouton
     fontFamily: Platform.OS === 'ios' ? 'AvenirNext-Regular' : 'sans-serif-light',
+  },
+  buttonContainer: {
+    width: '80%', // Largeur du bouton
+    marginBottom: 40, // Espace avant le footer
   },
   footerContainer: {
     flexDirection: 'row',
