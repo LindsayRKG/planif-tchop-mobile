@@ -211,40 +211,40 @@ function DishesList() {
         />
       </View>
       <View style={styles.gridContainer}>
-          <View style={styles.gridItem}>
-              <Text style={styles.label}><FontAwesome name="clock-o" size={14} /> Préparation (min):</Text>
-              <TextInput
-                  style={styles.input}
-                  value={String(editedDishData.prepTime || 0)}
-                  onChangeText={(value) => handleEditedInputChange('prepTime', value)}
-                  keyboardType="numeric"
-              />
-          </View>
-          <View style={styles.gridItem}>
-              <Text style={styles.label}><FontAwesome name="clock-o" size={14} /> Cuisson (min):</Text>
-              <TextInput
-                  style={styles.input}
-                  value={String(editedDishData.cookTime || 0)}
-                  onChangeText={(value) => handleEditedInputChange('cookTime', value)}
-                  keyboardType="numeric"
-              />
-          </View>
+        <View style={styles.gridItem}>
+          <Text style={styles.label}><FontAwesome name="clock-o" size={14} /> Préparation (min):</Text>
+          <TextInput
+            style={styles.input}
+            value={String(editedDishData.prepTime || 0)}
+            onChangeText={(value) => handleEditedInputChange('prepTime', value)}
+            keyboardType="numeric"
+          />
+        </View>
+        <View style={styles.gridItem}>
+          <Text style={styles.label}><FontAwesome name="clock-o" size={14} /> Cuisson (min):</Text>
+          <TextInput
+            style={styles.input}
+            value={String(editedDishData.cookTime || 0)}
+            onChangeText={(value) => handleEditedInputChange('cookTime', value)}
+            keyboardType="numeric"
+          />
+        </View>
       </View>
       <View style={styles.formGroup}>
         <Text style={styles.label}><FontAwesome name="clipboard" size={14} /> Catégorie:</Text>
         <View style={styles.pickerContainer}>
-            <Picker
-              selectedValue={editedDishData.category || ''}
-              onValueChange={(value) => handleEditedInputChange('category', value)}
-              style={styles.picker}
-            >
-              <Picker.Item label="Petit-déjeuner" value="Petit-déjeuner" />
-              <Picker.Item label="Déjeuner" value="Déjeuner" />
-              <Picker.Item label="Dîner" value="Dîner" />
-              <Picker.Item label="Dessert" value="Dessert" />
-              <Picker.Item label="Collation" value="Collation" />
-              <Picker.Item label="Boisson" value="Boisson" />
-            </Picker>
+          <Picker
+            selectedValue={editedDishData.category || ''}
+            onValueChange={(value) => handleEditedInputChange('category', value)}
+            style={styles.picker}
+          >
+            <Picker.Item label="Petit-déjeuner" value="Petit-déjeuner" />
+            <Picker.Item label="Déjeuner" value="Déjeuner" />
+            <Picker.Item label="Dîner" value="Dîner" />
+            <Picker.Item label="Dessert" value="Dessert" />
+            <Picker.Item label="Collation" value="Collation" />
+            <Picker.Item label="Boisson" value="Boisson" />
+          </Picker>
         </View>
       </View>
       <View style={styles.formGroup}>
@@ -276,28 +276,28 @@ function DishesList() {
               onChangeText={(value) => handleEditedIngredientChange(index, 'name', value)}
             />
             <View style={styles.ingredientRow}>
-                <TextInput
-                  style={[styles.input, styles.ingredientInputQty]} placeholder="Qté" value={ingredient.quantity}
-                  onChangeText={(value) => handleEditedIngredientChange(index, 'quantity', value)} keyboardType="numeric"
-                />
-                <TextInput
-                  style={[styles.input, styles.ingredientInputUnit]} placeholder="Unité" value={ingredient.unit}
-                  onChangeText={(value) => handleEditedIngredientChange(index, 'unit', value)}
-                />
+              <TextInput
+                style={[styles.input, styles.ingredientInputQty]} placeholder="Qté" value={ingredient.quantity}
+                onChangeText={(value) => handleEditedIngredientChange(index, 'quantity', value)} keyboardType="numeric"
+              />
+              <TextInput
+                style={[styles.input, styles.ingredientInputUnit]} placeholder="Unité" value={ingredient.unit}
+                onChangeText={(value) => handleEditedIngredientChange(index, 'unit', value)}
+              />
             </View>
-            <View style={styles.pickerContainerIngredient}>
-                <Picker
-                  selectedValue={ingredient.category}
-                  onValueChange={(value) => handleEditedIngredientChange(index, 'category', value)}
-                  style={styles.picker}
-                >
-                  {INGREDIENT_CATEGORIES.map((cat, catIndex) => (
-                    <Picker.Item key={catIndex} label={cat} value={cat === "Sélectionner une catégorie" ? "" : cat} />
-                  ))}
-                </Picker>
+            <View style={[styles.pickerContainerIngredient, styles.ingredientPickerMargin]}>
+              <Picker
+                selectedValue={ingredient.category}
+                onValueChange={(value) => handleEditedIngredientChange(index, 'category', value)}
+                style={styles.picker}
+              >
+                {INGREDIENT_CATEGORIES.map((cat, catIndex) => (
+                  <Picker.Item key={catIndex} label={cat} value={cat === "Sélectionner une catégorie" ? "" : cat} />
+                ))}
+              </Picker>
             </View>
             <TextInput
-              style={[styles.input, styles.ingredientInput]} placeholder="Prix (XAF, optionnel)" value={ingredient.price}
+              style={[styles.input, styles.ingredientInput, styles.ingredientPriceMargin]} placeholder="Prix (XAF, optionnel)" value={ingredient.price}
               onChangeText={(value) => handleEditedIngredientChange(index, 'price', value)} keyboardType="numeric"
             />
             {(editedDishData.ingredients || []).length > 1 && (
@@ -379,326 +379,219 @@ function DishesList() {
   };
 
   if (loading) {
-    return <ActivityIndicator size="large" color="#007bff" style={styles.loading} />;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007A5E" />
+        <Text style={styles.loadingText}>Chargement des plats...</Text>
+      </View>
+    );
   }
 
-  if (error && !editingDishId) { // Afficher l'erreur générale seulement si on n'est pas en mode édition
-    return <Text style={styles.errorText}>{error}</Text>;
+  if (error && !editingDishId) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+      </View>
+    );
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.listTitle}><FontAwesome name="list-alt" size={20} /> Liste des plats</Text>
-      {dishes.length === 0 ? (
-        <Text style={styles.noDishesText}>Aucun plat enregistré.</Text>
-      ) : (
-        <FlatList
-          data={dishes}
-          renderItem={renderDishItem}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
-        />
-      )}
-    </View>
+    <FlatList
+      data={dishes}
+      renderItem={renderDishItem}
+      keyExtractor={item => item.id}
+      contentContainerStyle={styles.listContainer}
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <FontAwesome name="cutlery" size={50} color="#ccc" />
+          <Text style={styles.emptyText}>Aucun plat trouvé.</Text>
+          <Text style={styles.emptySubText}>Ajoutez des plats pour les voir ici.</Text>
+        </View>
+      }
+    />
   );
 }
 
+// Définition des constantes de couleur
+const ACCENT_GREEN = '#007A5E';
+const ACCENT_RED = '#CE1126';
+const ACCENT_RED_LIGHT = '#F8D7DA';
+const ACCENT_RED_DARK = '#721c24';
+const ACCENT_YELLOW = '#FCD116';
+
+const BACKGROUND_PRIMARY = '#FFFFFF';
+const BACKGROUND_SECONDARY = '#F8F8F8';
+
+const BORDER_LIGHT = '#E0E0E0';
+const BORDER_MEDIUM = '#C0C0C0';
+
+const TEXT_PRIMARY = '#333333';
+const TEXT_SECONDARY = '#666666';
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    // padding: 10, // Padding géré par FlatList ou ScrollView interne
-    backgroundColor: '#f8f9fa',
-  },
-  loading: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    color: 'red',
-    textAlign: 'center',
-    margin: 20,
-    fontSize: 16,
-  },
-  errorTextItem: {
-      color: 'red',
-      textAlign: 'center',
-      marginBottom: 10,
-      fontSize: 14,
-  },
-  listTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 15,
-    color: '#343a40',
-  },
-  noDishesText: {
-    textAlign: 'center',
-    marginTop: 30,
-    fontSize: 16,
-    color: '#6c757d',
-  },
-  listContainer: {
-    paddingHorizontal: 10,
-    paddingBottom: 20,
-  },
-  dishItem: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
-    marginBottom: 15,
-    overflow: 'hidden', // Pour que le borderRadius s'applique à l'image
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-  },
-  dishImage: {
-    width: '100%',
-    height: 180,
-  },
-  noImagePlaceholder: {
-      width: '100%',
-      height: 150,
-      backgroundColor: '#e9ecef',
-      justifyContent: 'center',
-      alignItems: 'center',
-  },
-  dishInfo: {
-    padding: 15,
-  },
-  dishName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 5,
-    color: '#343a40',
-  },
-  dishCategory: {
-    fontSize: 13,
-    color: '#6c757d',
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-  dishDescription: {
-    fontSize: 14,
-    color: '#495057',
-    marginBottom: 8,
-    lineHeight: 20,
-  },
-  dishTimes: {
-    fontSize: 13,
-    color: '#6c757d',
-    marginBottom: 5,
-  },
-  ingredientsDisplay: {
-    marginTop: 10,
-    marginBottom: 15,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  ingredientsDisplayTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    marginBottom: 5,
-    color: '#343a40',
-  },
-  ingredientText: {
-    fontSize: 13,
-    color: '#495057',
-    marginLeft: 5,
-    lineHeight: 18,
-  },
-  buttonGroupItem: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 10,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-    marginLeft: 10,
-  },
-  actionButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 5,
-  },
-   actionButtonTextSecondary: {
-    color: '#6c757d',
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginLeft: 5,
-  },
-  primaryButton: {
-    backgroundColor: '#007bff',
-  },
-  dangerButton: {
-    backgroundColor: '#dc3545',
-  },
-  successButton: {
-      backgroundColor: '#28a745',
-  },
-  secondaryButton: {
-      backgroundColor: '#f8f9fa',
-      borderWidth: 1,
-      borderColor: '#6c757d',
-  },
-  // Styles pour le formulaire d'édition
+  // Styles de base
   editFormCard: {
     padding: 15,
-    backgroundColor: '#e9ecef', // Fond différent pour l'édition
-    borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: 'transparent',
   },
   editFormTitle: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: TEXT_PRIMARY,
+  },
+  errorTextItem: {
+    color: ACCENT_RED,
     marginBottom: 15,
-    color: '#343a40',
+    textAlign: 'center',
+    fontSize: 14,
   },
   formGroup: {
-    marginBottom: 12,
+    marginBottom: 15,
   },
   label: {
-    fontSize: 14,
-    marginBottom: 4,
-    color: '#495057',
+    fontSize: 16,
+    marginBottom: 5,
+    color: TEXT_PRIMARY,
     fontWeight: '500',
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: BORDER_LIGHT,
     borderRadius: 5,
     paddingHorizontal: 10,
-    paddingVertical: 8,
-    fontSize: 14,
-    backgroundColor: '#fff',
+    paddingVertical: 10,
+    fontSize: 16,
+    backgroundColor: BACKGROUND_PRIMARY,
   },
   textarea: {
-    height: 80,
+    height: 100,
     textAlignVertical: 'top',
   },
+  
+  // Styles de grille
   gridContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 15,
   },
   gridItem: {
-      flex: 1,
-      marginHorizontal: 2,
+    flex: 1,
+    marginHorizontal: 5,
   },
+  
+  // Styles de sélecteur
   pickerContainer: {
     borderWidth: 1,
-    borderColor: '#ced4da',
+    borderColor: BORDER_LIGHT,
     borderRadius: 5,
-    backgroundColor: '#fff',
-    height: 50,
+    backgroundColor: BACKGROUND_PRIMARY,
     justifyContent: 'center',
-  },
-  pickerContainerIngredient: {
-    borderWidth: 1,
-    borderColor: '#ced4da',
-    borderRadius: 5,
-    backgroundColor: '#fff',
-    height: 50,
-    justifyContent: 'center',
-    marginTop: 5,
   },
   picker: {
-    height: 50,
     width: '100%',
   },
+  
+  // Styles de sélection d'image
   imagePickerButton: {
-    backgroundColor: '#6c757d',
-    padding: 10,
+    backgroundColor: ACCENT_GREEN,
+    padding: 12,
     borderRadius: 5,
     alignItems: 'center',
     marginBottom: 10,
   },
   imagePickerButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    color: BACKGROUND_PRIMARY,
+    fontSize: 16,
+    fontWeight: '500',
   },
   photoPreview: {
     width: '100%',
-    height: 150,
+    height: 200,
     resizeMode: 'contain',
     marginTop: 10,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: BORDER_LIGHT,
     borderRadius: 5,
+    alignSelf: 'center',
   },
+  
+  // Styles de section ingrédients
   ingredientsSection: {
-    marginTop: 15,
-    marginBottom: 15,
+    marginTop: 20,
+    marginBottom: 20,
     borderTopWidth: 1,
-    borderTopColor: '#ddd',
-    paddingTop: 10,
+    borderTopColor: BORDER_LIGHT,
+    paddingTop: 15,
   },
   ingredientsTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#343a40',
+    marginBottom: 15,
+    color: TEXT_PRIMARY,
   },
   ingredientItemEdit: {
-    marginBottom: 10,
-    padding: 8,
+    marginBottom: 15,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: BORDER_LIGHT,
     borderRadius: 5,
-    backgroundColor: '#fdfdfd',
+    backgroundColor: BACKGROUND_PRIMARY,
   },
   ingredientInput: {
-    marginBottom: 5,
-    fontSize: 13,
-    paddingVertical: 6,
+    marginBottom: 8,
   },
   ingredientRow: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
+    flexDirection: 'row',
+    marginBottom: 8,
   },
   ingredientInputQty: {
-      flex: 1,
-      marginRight: 5,
-      fontSize: 13,
-      paddingVertical: 6,
+    flex: 1,
+    marginRight: 4,
   },
   ingredientInputUnit: {
-      flex: 1,
-      marginLeft: 5,
-      fontSize: 13,
-      paddingVertical: 6,
+    flex: 1,
+    marginLeft: 4,
+  },
+  ingredientPickerMargin: {
+    marginBottom: 8,
+  },
+  ingredientPriceMargin: {
+    marginBottom: 8,
+  },
+  pickerContainerIngredient: {
+    borderWidth: 1,
+    borderColor: BORDER_LIGHT,
+    borderRadius: 5,
+    backgroundColor: BACKGROUND_PRIMARY,
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   removeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    padding: 6,
-    backgroundColor: '#f8d7da',
+    marginTop: 10,
+    padding: 8,
+    backgroundColor: ACCENT_RED_LIGHT,
     borderRadius: 5,
+    alignSelf: 'flex-end',
   },
   removeButtonText: {
-    color: '#721c24',
+    color: ACCENT_RED_DARK,
     marginLeft: 5,
     fontWeight: 'bold',
-    fontSize: 12,
   },
+  
+  // Styles de bouton d'ajout
   addButtonSmall: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#28a745',
-    padding: 10,
+    backgroundColor: ACCENT_GREEN,
+    padding: 8,
     borderRadius: 5,
-    marginTop: 5,
+    marginTop: 10,
   },
   addButtonTextSmall: {
     color: '#fff',
@@ -706,10 +599,159 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 5,
   },
+  
+  // Styles de boutons d'action
   editButtonGroup: {
+    marginTop: 20,
+  },
+  actionButton: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    marginVertical: 5,
+  },
+  successButton: {
+    backgroundColor: ACCENT_GREEN,
+  },
+  secondaryButton: {
+    backgroundColor: '#e9ecef',
+  },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  actionButtonTextSecondary: {
+    color: '#6c757d',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  
+  // Autres styles existants
+  listContainer: {
+    padding: 10,
+  },
+  dishItem: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginBottom: 15,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  dishImage: {
+    width: '100%',
+    height: 180,
+  },
+  noImagePlaceholder: {
+    width: '100%',
+    height: 180,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dishInfo: {
+    padding: 15,
+  },
+  dishName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#333',
+  },
+  dishCategory: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  dishDescription: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 10,
+    fontStyle: 'italic',
+  },
+  dishTimes: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  ingredientsDisplay: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  ingredientsDisplayTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#333',
+  },
+  ingredientText: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 3,
+  },
+  buttonGroupItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginTop: 15,
+  },
+  primaryButton: {
+    backgroundColor: '#007bff',
+    flex: 1,
+    marginRight: 5,
+  },
+  dangerButton: {
+    backgroundColor: '#dc3545',
+    flex: 1,
+    marginLeft: 5,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    color: '#dc3545',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  emptyContainer: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 10,
+  },
+  emptySubText: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
   },
 });
 

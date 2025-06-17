@@ -8,7 +8,8 @@ import HomeScreen from '../screens/HomeScreen';
 import DishesScreen from '../screens/DishesScreen';
 import FamilyScreen from '../screens/FamilyScreen';
 import MealPlannerScreen from '../screens/MealPlannerScreen';
-import InventoryScreen from '../screens/InventoryScreen'; // Importer le nouvel écran
+import InventoryScreen from '../screens/InventoryScreen';
+import EmailSendScreen from '../screens/EmailSendScreen'; // Nouvel écran pour l'envoi d'emails
 
 // --- Définition des couleurs camerounaises pour la navigation ---
 const ACCENT_GREEN = '#007A5E';       // Vert foncé, vif (pour l'icône active)
@@ -35,6 +36,8 @@ function AppNavigator() {
               iconName = 'calendar'; // Icône "calendar" (pour le planning)
             } else if (route.name === 'Courses') { // Ajouter l'icône pour le nouvel onglet
               iconName = 'shopping-cart'; // Icône "shopping-cart"
+            } else if (route.name === 'Emails') { // Icône pour l'écran d'envoi d'emails
+              iconName = 'envelope'; // Icône "envelope"
             }
 
             // Retourne le composant FontAwesome avec la taille et la couleur appropriées
@@ -67,9 +70,11 @@ function AppNavigator() {
         <Tab.Screen name="Planning" component={MealPlannerScreen} />
         <Tab.Screen name="Courses" component={InventoryScreen} /> 
         <Tab.Screen name="Famille" component={FamilyScreen} />
+        <Tab.Screen name="Emails" component={EmailSendScreen} />
       </Tab.Navigator>
     </NavigationContainer>
   );
 }
 
 export default AppNavigator;
+

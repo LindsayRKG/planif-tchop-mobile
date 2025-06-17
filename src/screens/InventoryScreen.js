@@ -34,6 +34,7 @@ import { INGREDIENT_CATEGORIES } from '../utils/IngredientCategories';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import moment from 'moment';
 import 'moment/locale/fr';
+import EmailButton from '../components/common/EmailButton';
 
 moment.locale('fr');
 
@@ -52,6 +53,70 @@ const groupStockByCategory = (stockData) => {
         return acc;
     }, {});
 };
+
+// --- Main Inventory Screen Component ---
+function InventoryScreen() {
+    const [activeTab, setActiveTab] = useState('stock'); // 'stock' or 'shopping'
+
+    return (
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.container}>
+                {/* Header with title */}
+                <View style={styles.headerContainer}>
+                    <View style={styles.titleContainer}>
+                        <FontAwesome 
+                            name={activeTab === 'stock' ? 'cubes' : 'shopping-basket'} 
+                            size={32} 
+                            color={styles.ACCENT_RED} 
+                        />
+                        <Text style={styles.title}>
+                            {activeTab === 'stock' ? 'Gestion du Stock' : 'Liste de Courses'}
+                        </Text>
+                    </View>
+                    <EmailButton 
+                        type={activeTab === 'stock' ? 'stock' : 'shopping'} 
+                        style={styles.emailButton} 
+                    />
+                </View>
+
+                {/* Tab navigation */}
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'stock' && styles.activeTab]}
+                        onPress={() => setActiveTab('stock')}
+                    >
+                        <FontAwesome
+                            name="cubes"
+                            size={18}
+                            color={activeTab === 'stock' ? '#fff' : styles.ACCENT_GREEN}
+                        />
+                        <Text style={[styles.tabText, activeTab === 'stock' && styles.activeTabText]}>
+                            Stock
+                        </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.tab, activeTab === 'shopping' && styles.activeTab]}
+                        onPress={() => setActiveTab('shopping')}
+                    >
+                        <FontAwesome
+                            name="shopping-basket"
+                            size={18}
+                            color={activeTab === 'shopping' ? '#fff' : styles.ACCENT_GREEN}
+                        />
+                        <Text style={[styles.tabText, activeTab === 'shopping' && styles.activeTabText]}>
+                            Liste de Courses
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+
+                {/* Content based on active tab */}
+                <View style={styles.contentContainer}>
+                    {activeTab === 'stock' ? <StockManagementView /> : <ShoppingListView />}
+                </View>
+            </View>
+        </SafeAreaView>
+    );
+}
 
 // --- Stock Management View Component ---
 function StockManagementView() {
@@ -387,120 +452,139 @@ function ShoppingListView() {
             // 1. Get current stock
             const stockQuery = query(collection(db, 'userStock'), where('userId', '==', userId));
             const stockSnapshot = await getDocs(stockQuery);
-            const currentStock = stockSnapshot.docs.reduce((acc, doc) => {
-                const data = doc.data();
-                const normalizedName = normalizeName(data.name);
-                const unit = data.unit ? data.unit.trim() : '';
-                const key = `${normalizedName}_${unit}`;
-                acc[key] = (acc[key] || 0) + (data.quantity || 0);
-                return acc;
-            }, {});
+            const stockItems = {};
+            stockSnapshot.docs.forEach(doc => {
+                const item = doc.data();
+                const key = normalizeName(item.name) + '_' + item.unit.toLowerCase();
+                stockItems[key] = {
+                    id: doc.id,
+                    ...item
+                };
+            });
 
-            // 2. Get planned meals for the selected date range
-            const plansQuery = query(
+            // 2. Get meal plans for the selected date range
+            const mealPlansQuery = query(
                 collection(db, 'mealPlans'),
-                where('userId', '==', userId),
                 where('date', '>=', moment(startDate).format('YYYY-MM-DD')),
                 where('date', '<=', moment(endDate).format('YYYY-MM-DD')),
-                where('prepared', '==', false) // Only consider unprepared meals
+                where('userId', '==', userId)
             );
-            const plansSnapshot = await getDocs(plansQuery);
+            const mealPlansSnapshot = await getDocs(mealPlansQuery);
+            const mealPlans = mealPlansSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
 
-            if (plansSnapshot.empty) {
-                setLoading(false);
-                setError("Aucun repas non préparé planifié pour cette période.");
-                return;
-            }
+            // 3. For each meal plan, get the dish and its ingredients
+            for (const plan of mealPlans) {
+                if (!plan.dishId) continue;
 
-            // 3. Aggregate required ingredients from all planned dishes
-            for (const planDoc of plansSnapshot.docs) {
-                const planData = planDoc.data();
-                const dishRef = doc(db, 'dishes', planData.dishId);
-                const dishSnap = await getDoc(dishRef);
+                const dishDoc = await getDoc(doc(db, 'dishes', plan.dishId));
+                if (!dishDoc.exists()) continue;
 
-                if (dishSnap.exists()) {
-                    const dishData = dishSnap.data();
-                    const servings = planData.servingsPlanned || 1;
-                    if (dishData.ingredients && Array.isArray(dishData.ingredients)) {
-                        dishData.ingredients.forEach(ing => {
-                            const requiredQuantity = (ing.quantity || 0) * servings;
-                            if (requiredQuantity > 0) {
-                                const normalizedName = normalizeName(ing.name);
-                                const unit = ing.unit ? ing.unit.trim() : '';
-                                const key = `${normalizedName}_${unit}`;
-                                if (!aggregatedIngredients[key]) {
-                                    aggregatedIngredients[key] = {
-                                        name: ing.name.trim(),
-                                        quantity: 0,
-                                        unit: unit,
-                                        category: ing.category || 'Autres',
-                                        sources: []
-                                    };
-                                }
-                                aggregatedIngredients[key].quantity += requiredQuantity;
-                                aggregatedIngredients[key].sources.push(`${dishData.name} (x${servings})`);
-                            }
+                const dish = dishDoc.data();
+                const servingsMultiplier = plan.servingsPlanned / (dish.servings || 1);
+
+                // Process each ingredient
+                (dish.ingredients || []).forEach(ingredient => {
+                    const normalizedName = normalizeName(ingredient.name);
+                    const normalizedUnit = ingredient.unit.toLowerCase();
+                    const key = normalizedName + '_' + normalizedUnit;
+
+                    // Calculate required quantity
+                    const requiredQuantity = (ingredient.quantity || 0) * servingsMultiplier;
+
+                    // Add to aggregated ingredients
+                    if (!aggregatedIngredients[key]) {
+                        aggregatedIngredients[key] = {
+                            name: ingredient.name,
+                            quantity: requiredQuantity,
+                            unit: ingredient.unit,
+                            category: ingredient.category || 'Autres',
+                            sources: [{
+                                dishName: dish.name,
+                                planDate: plan.date,
+                                mealType: plan.mealType,
+                                quantity: requiredQuantity
+                            }]
+                        };
+                    } else {
+                        aggregatedIngredients[key].quantity += requiredQuantity;
+                        aggregatedIngredients[key].sources.push({
+                            dishName: dish.name,
+                            planDate: plan.date,
+                            mealType: plan.mealType,
+                            quantity: requiredQuantity
                         });
                     }
-                }
+                });
             }
 
-            // 4. Compare required ingredients with stock
-            Object.values(aggregatedIngredients).forEach(ing => {
-                const normalizedName = normalizeName(ing.name);
-                const unit = ing.unit ? ing.unit.trim() : '';
-                const key = `${normalizedName}_${unit}`;
-                const stockQuantity = currentStock[key] || 0;
-                const neededQuantity = ing.quantity - stockQuantity;
+            // 4. Compare with stock and create shopping list
+            Object.keys(aggregatedIngredients).forEach(key => {
+                const ingredient = aggregatedIngredients[key];
+                const stockItem = stockItems[key];
 
+                let neededQuantity = ingredient.quantity;
+                if (stockItem) {
+                    neededQuantity -= (stockItem.quantity || 0);
+                }
+
+                // Only add to shopping list if we need more than what's in stock
                 if (neededQuantity > 0) {
-                    const category = ing.category || 'Autres';
+                    const category = ingredient.category;
                     if (!itemsToBuy[category]) {
                         itemsToBuy[category] = [];
                     }
                     itemsToBuy[category].push({
-                        name: ing.name,
-                        quantity: Math.round(neededQuantity * 100) / 100, // Round to 2 decimal places
-                        unit: ing.unit
+                        name: ingredient.name,
+                        quantity: neededQuantity,
+                        unit: ingredient.unit,
+                        sources: ingredient.sources
                     });
                 }
             });
 
-            // Sort categories and items within categories
-            const sortedCategories = Object.keys(itemsToBuy).sort();
-            const sortedItemsToBuy = {};
-            sortedCategories.forEach(cat => {
-                sortedItemsToBuy[cat] = itemsToBuy[cat].sort((a, b) => a.name.localeCompare(b.name));
+            // 5. Sort items in each category
+            Object.keys(itemsToBuy).forEach(category => {
+                itemsToBuy[category].sort((a, b) => a.name.localeCompare(b.name));
             });
 
-            setShoppingList(sortedItemsToBuy);
-
+            setShoppingList(itemsToBuy);
+            setLoading(false);
         } catch (err) {
-            console.error("Erreur génération liste de courses:", err);
-            setError(`Impossible de générer la liste: ${err.message}`);
-            // Check for missing index error
-            if (err.code === 'failed-precondition') {
-                 setError("Index Firebase manquant pour la requête des repas planifiés. Veuillez vérifier la console Firebase.");
-                 console.log("Index manquant probable pour la collection 'mealPlans' sur les champs 'userId', 'date', 'prepared'.");
-            }
-        } finally {
+            console.error("Erreur génération liste courses:", err);
+            setError("Impossible de générer la liste de courses: " + err.message);
             setLoading(false);
         }
     }, [startDate, endDate]);
 
-    const renderShoppingListItem = ({ item }) => (
-        <View style={styles.shoppingListItem}>
-            <Text style={styles.shoppingItemName}>{item.name}</Text>
-            <Text style={styles.shoppingItemQuantity}>{item.quantity} {item.unit}</Text>
+    useEffect(() => {
+        generateShoppingList();
+    }, [generateShoppingList]);
+
+    const renderShoppingItem = ({ item }) => (
+        <View style={styles.shoppingItem}>
+            <View style={styles.shoppingItemInfo}>
+                <Text style={styles.shoppingItemName}>{item.name}</Text>
+                <Text style={styles.shoppingItemQuantity}>{item.quantity.toFixed(2)} {item.unit}</Text>
+            </View>
+            <View style={styles.shoppingItemSources}>
+                {item.sources.map((source, index) => (
+                    <Text key={index} style={styles.shoppingItemSource}>
+                        • {source.dishName} ({moment(source.planDate).format('DD/MM')}, {source.mealType})
+                    </Text>
+                ))}
+            </View>
         </View>
     );
 
-    const renderShoppingListCategory = ({ item: category }) => (
-        <View style={styles.shoppingListCategorySection}>
-            <Text style={styles.shoppingListCategoryTitle}>{category}</Text>
+    const renderCategorySection = ({ item: category }) => (
+        <View style={styles.shoppingCategorySection}>
+            <Text style={styles.shoppingCategoryTitle}>{category}</Text>
             <FlatList
                 data={shoppingList[category]}
-                renderItem={renderShoppingListItem}
+                renderItem={renderShoppingItem}
                 keyExtractor={(item, index) => `${item.name}_${index}`}
                 scrollEnabled={false}
             />
@@ -508,254 +592,235 @@ function ShoppingListView() {
     );
 
     return (
-        <ScrollView style={styles.contentView}> {/* Use ScrollView for the whole shopping list section */}
-            <View style={styles.dateRangeContainer}>
+        <View style={styles.contentView}>
+            <View style={styles.datePickerContainer}>
                 <View style={styles.datePickerGroup}>
-                    <Text style={styles.dateLabel}>Du:</Text>
-                    <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={styles.dateButton}>
-                        <Text style={styles.dateButtonText}>{moment(startDate).format('DD/MM/YYYY')}</Text>
+                    <Text style={styles.datePickerLabel}>Du:</Text>
+                    <TouchableOpacity onPress={() => setShowStartDatePicker(true)} style={styles.datePickerButton}>
+                        <FontAwesome name="calendar" size={16} color={styles.TEXT_SECONDARY} style={{ marginRight: 8 }} />
+                        <Text style={styles.datePickerButtonText}>{moment(startDate).format('DD/MM/YYYY')}</Text>
                     </TouchableOpacity>
                     {showStartDatePicker && (
-                        <DateTimePicker value={startDate} mode="date" display="default" onChange={handleStartDateChange} />
+                        <DateTimePicker
+                            value={startDate}
+                            mode="date"
+                            display="default"
+                            onChange={handleStartDateChange}
+                        />
                     )}
                 </View>
                 <View style={styles.datePickerGroup}>
-                    <Text style={styles.dateLabel}>Au:</Text>
-                    <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.dateButton}>
-                        <Text style={styles.dateButtonText}>{moment(endDate).format('DD/MM/YYYY')}</Text>
+                    <Text style={styles.datePickerLabel}>Au:</Text>
+                    <TouchableOpacity onPress={() => setShowEndDatePicker(true)} style={styles.datePickerButton}>
+                        <FontAwesome name="calendar" size={16} color={styles.TEXT_SECONDARY} style={{ marginRight: 8 }} />
+                        <Text style={styles.datePickerButtonText}>{moment(endDate).format('DD/MM/YYYY')}</Text>
                     </TouchableOpacity>
                     {showEndDatePicker && (
-                        <DateTimePicker value={endDate} mode="date" display="default" onChange={handleEndDateChange} minimumDate={startDate} />
+                        <DateTimePicker
+                            value={endDate}
+                            mode="date"
+                            display="default"
+                            onChange={handleEndDateChange}
+                        />
                     )}
                 </View>
+                <TouchableOpacity onPress={generateShoppingList} style={styles.generateButton} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                        <>
+                            <FontAwesome name="refresh" size={16} color="#fff" style={{ marginRight: 8 }} />
+                            <Text style={styles.generateButtonText}>Générer</Text>
+                        </>
+                    )}
+                </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-                style={[styles.generateButton, loading && styles.generateButtonDisabled]}
-                onPress={generateShoppingList}
-                disabled={loading}
-            >
-                {loading ? (
-                    <ActivityIndicator color="#fff" />
-                ) : (
-                    <Text style={styles.generateButtonText}><FontAwesome name="list-alt" /> Générer la Liste</Text>
-                )}
-            </TouchableOpacity>
 
             {error && <Text style={styles.errorText}>{error}</Text>}
 
-            {Object.keys(shoppingList).length > 0 && (
+            {loading ? (
+                <ActivityIndicator size="large" color={styles.ACCENT_GREEN} style={{ marginVertical: 20 }} />
+            ) : (
                 <FlatList
-                    data={Object.keys(shoppingList)}
-                    renderItem={renderShoppingListCategory}
+                    data={Object.keys(shoppingList).sort()}
+                    renderItem={renderCategorySection}
                     keyExtractor={(category) => category}
-                    ListHeaderComponent={<Text style={styles.shoppingListTitle}>Liste de Courses</Text>}
-                    contentContainerStyle={{ paddingBottom: 20 }}
-                    scrollEnabled={false} // Disable scroll as parent is ScrollView
+                    contentContainerStyle={styles.listContentContainer}
+                    ListEmptyComponent={
+                        <Text style={styles.infoText}>
+                            Aucun article à acheter pour cette période ou aucun repas planifié.
+                        </Text>
+                    }
                 />
             )}
-            {Object.keys(shoppingList).length === 0 && !loading && !error && (
-                 <Text style={styles.infoText}>Aucun ingrédient nécessaire pour la période sélectionnée ou la liste n'a pas encore été générée.</Text>
-            )}
-        </ScrollView>
+        </View>
     );
 }
 
-// --- Main Screen Component (InventoryScreen) ---
-function InventoryScreen() {
-    const [activeView, setActiveView] = useState('stock'); // 'stock' or 'shoppingList'
-
-    return (
-        <SafeAreaView style={styles.safeArea}>
-            <View style={styles.headerContainer}>
-                <FontAwesome name={activeView === 'stock' ? "cubes" : "shopping-cart"} size={32} color={styles.ACCENT_RED} />
-                <Text style={styles.title}>{activeView === 'stock' ? 'Gestion du Stock' : 'Liste de Courses'}</Text>
-            </View>
-
-            <View style={styles.viewToggleContainer}>
-                <TouchableOpacity
-                    style={[styles.toggleButton, activeView === 'stock' && styles.activeToggleButton]}
-                    onPress={() => setActiveView('stock')}
-                >
-                    <FontAwesome name="cubes" size={16} color={activeView === 'stock' ? '#fff' : styles.ACCENT_GREEN} style={styles.toggleIcon} />
-                    <Text style={[styles.toggleButtonText, activeView === 'stock' && styles.activeToggleButtonText]}>Mon Stock</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.toggleButton, activeView === 'shoppingList' && styles.activeToggleButton]}
-                    onPress={() => setActiveView('shoppingList')}
-                >
-                    <FontAwesome name="list-alt" size={16} color={activeView === 'shoppingList' ? '#fff' : styles.ACCENT_GREEN} style={styles.toggleIcon} />
-                    <Text style={[styles.toggleButtonText, activeView === 'shoppingList' && styles.activeToggleButtonText]}>Liste de Courses</Text>
-                </TouchableOpacity>
-            </View>
-
-            {activeView === 'stock' ? <StockManagementView /> : <ShoppingListView />}
-        </SafeAreaView>
-    );
-}
-
-// --- Styles --- (Consolidated and refined)
 const styles = StyleSheet.create({
-    // --- Palette ---
+    // --- Palette de Couleurs ---
     ACCENT_GREEN: '#007A5E',
     ACCENT_RED: '#CE1126',
     ACCENT_YELLOW: '#FCD116',
-    ACCENT_YELLOW_DARK: '#b08f0a', // For low stock warning
+    ACCENT_YELLOW_DARK: '#E6B800', // Darker yellow for better contrast
     BACKGROUND_PRIMARY: '#FFFFFF',
     SCREEN_BACKGROUND: '#EEF7F4',
     BORDER_LIGHT: '#E0E0E0',
     BORDER_MEDIUM: '#C0C0C0',
     TEXT_PRIMARY: '#333333',
     TEXT_SECONDARY: '#666666',
-    TEXT_WHITE: '#FFFFFF',
-    TEXT_ERROR: '#CE1126',
-    TEXT_PLACEHOLDER: '#A0A0A0',
-    ITEM_OUT_OF_STOCK_BG: '#F8D7DA',
-    ITEM_LOW_STOCK_BG: '#FFF3CD',
 
-    // --- Screen Layout ---
+    // --- Main Screen Styles ---
     safeArea: {
         flex: 1,
-        backgroundColor: '#EEF7F4', // SCREEN_BACKGROUND
+        backgroundColor: '#EEF7F4',
         paddingTop: Platform.OS === 'android' ? 30 : 0,
+    },
+    container: {
+        flex: 1,
+        backgroundColor: '#EEF7F4',
     },
     headerContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        justifyContent: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
         paddingVertical: 15,
-        marginBottom: 15,
+    },
+    titleContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
         marginLeft: 15,
-        color: '#333333', // TEXT_PRIMARY
+        color: '#333333',
+        textShadowColor: 'rgba(0, 0, 0, 0.05)',
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
     },
-    viewToggleContainer: {
+    emailButton: {
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+    },
+    tabContainer: {
         flexDirection: 'row',
-        justifyContent: 'center',
-        marginBottom: 20,
-        backgroundColor: '#FFFFFF', // BACKGROUND_PRIMARY
-        borderRadius: 12,
-        padding: 6,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 10,
         marginHorizontal: 20,
-        elevation: 4,
+        marginBottom: 15,
+        padding: 5,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
+        elevation: 3,
     },
-    toggleButton: {
+    tab: {
+        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        flex: 1,
         paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 10,
-        marginHorizontal: 3,
-        borderWidth: 1,
-        borderColor: '#E0E0E0', // BORDER_LIGHT
+        borderRadius: 8,
     },
-    activeToggleButton: {
-        backgroundColor: '#007A5E', // ACCENT_GREEN
-        borderColor: '#007A5E',
+    activeTab: {
+        backgroundColor: '#007A5E',
     },
-    toggleIcon: {
-        marginRight: 8,
-    },
-    toggleButtonText: {
-        fontSize: 15,
+    tabText: {
+        fontSize: 16,
         fontWeight: 'bold',
-        color: '#666666', // TEXT_SECONDARY
+        marginLeft: 8,
+        color: '#007A5E',
     },
-    activeToggleButtonText: {
-        color: '#FFFFFF', // TEXT_WHITE
+    activeTabText: {
+        color: '#FFFFFF',
     },
+    contentContainer: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        overflow: 'hidden',
+    },
+
+    // --- Shared Content View Styles ---
     contentView: {
         flex: 1,
-        paddingHorizontal: 15,
+        backgroundColor: '#FFFFFF',
+    },
+    errorText: {
+        color: '#dc3545',
+        textAlign: 'center',
+        margin: 15,
+        fontSize: 16,
+    },
+    infoText: {
+        textAlign: 'center',
+        margin: 20,
+        fontSize: 16,
+        color: '#666',
     },
     listContentContainer: {
         paddingBottom: 20,
     },
-    infoText: {
-        textAlign: 'center',
-        marginTop: 20,
-        color: '#666666', // TEXT_SECONDARY
-        fontSize: 14,
-        paddingHorizontal: 15,
-    },
-    errorText: {
-        color: '#CE1126', // TEXT_ERROR
-        textAlign: 'center',
-        marginVertical: 10,
-        fontSize: 14,
-        padding: 10,
-        backgroundColor: '#F8D7DA',
-        borderColor: '#f5c6cb',
-        borderWidth: 1,
-        borderRadius: 5,
-        marginHorizontal: 10,
-    },
 
-    // --- Stock View Specific ---
+    // --- Stock Management Styles ---
     searchAddContainer: {
         flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
+        padding: 15,
+        backgroundColor: '#FFFFFF',
     },
     searchInput: {
         flex: 1,
-        borderWidth: 1,
-        borderColor: '#C0C0C0', // BORDER_MEDIUM
-        borderRadius: 8,
+        height: 40,
+        backgroundColor: '#f8f9fa',
+        borderRadius: 5,
         paddingHorizontal: 15,
-        paddingVertical: 10,
-        fontSize: 16,
-        backgroundColor: '#FFFFFF', // BACKGROUND_PRIMARY
         marginRight: 10,
-        color: '#333333', // TEXT_PRIMARY
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        color: '#333333',
     },
     addButton: {
-        backgroundColor: '#007A5E', // ACCENT_GREEN
-        padding: 12,
-        borderRadius: 8,
+        width: 40,
+        height: 40,
+        backgroundColor: '#007A5E',
+        borderRadius: 5,
         justifyContent: 'center',
         alignItems: 'center',
-        elevation: 2,
     },
     categorySection: {
         marginBottom: 15,
+        paddingHorizontal: 15,
     },
     categoryTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        color: '#007A5E', // ACCENT_GREEN
         marginBottom: 10,
-        paddingBottom: 5,
+        color: '#333333',
         borderBottomWidth: 1,
-        borderBottomColor: '#E0E0E0', // BORDER_LIGHT
+        borderBottomColor: '#E0E0E0',
+        paddingBottom: 5,
     },
     itemContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFFFFF', // BACKGROUND_PRIMARY
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderRadius: 6,
+        backgroundColor: '#FFFFFF',
+        padding: 12,
+        borderRadius: 8,
         marginBottom: 8,
         borderWidth: 1,
-        borderColor: '#E0E0E0', // BORDER_LIGHT
+        borderColor: '#E0E0E0',
     },
     itemOutOfStock: {
-        backgroundColor: '#F8D7DA', // ITEM_OUT_OF_STOCK_BG
-        borderColor: '#f5c6cb',
+        backgroundColor: '#ffebee',
+        borderColor: '#ffcdd2',
     },
     itemLowStock: {
-        backgroundColor: '#FFF3CD', // ITEM_LOW_STOCK_BG
-        borderColor: '#ffeeba',
+        backgroundColor: '#fff8e1',
+        borderColor: '#ffecb3',
     },
     statusIcon: {
         marginRight: 10,
@@ -766,31 +831,28 @@ const styles = StyleSheet.create({
     itemName: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#333333', // TEXT_PRIMARY
+        color: '#333333',
     },
     itemNameOutOfStock: {
-        textDecorationLine: 'line-through',
-        color: '#666666', // TEXT_SECONDARY
+        color: '#b71c1c',
     },
     itemQuantity: {
         fontSize: 14,
-        color: '#666666', // TEXT_SECONDARY
+        color: '#666666',
         marginTop: 2,
     },
     itemQuantityOutOfStock: {
-        color: '#CE1126', // TEXT_ERROR
-        fontWeight: 'bold',
+        color: '#b71c1c',
     },
     itemQuantityLowStock: {
-        color: '#b08f0a', // ACCENT_YELLOW_DARK
-        fontWeight: 'bold',
+        color: '#f57f17',
     },
     itemActions: {
         flexDirection: 'row',
     },
     actionButton: {
         padding: 8,
-        marginLeft: 10,
+        marginLeft: 5,
     },
 
     // --- Modal Styles ---
@@ -799,35 +861,34 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        padding: 20,
     },
     modalContent: {
-        width: '90%',
-        backgroundColor: '#FFFFFF', // BACKGROUND_PRIMARY
+        width: '100%',
+        backgroundColor: '#FFFFFF',
         borderRadius: 10,
         padding: 20,
-        elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
-        shadowRadius: 4,
+        shadowRadius: 3.84,
+        elevation: 5,
     },
     modalTitle: {
         fontSize: 20,
         fontWeight: 'bold',
-        marginBottom: 20,
+        marginBottom: 15,
+        color: '#333333',
         textAlign: 'center',
-        color: '#333333', // TEXT_PRIMARY
     },
     modalInput: {
         borderWidth: 1,
-        borderColor: '#C0C0C0', // BORDER_MEDIUM
-        borderRadius: 8,
-        paddingHorizontal: 15,
-        paddingVertical: 12,
-        fontSize: 16,
+        borderColor: '#E0E0E0',
+        borderRadius: 5,
+        padding: 10,
         marginBottom: 15,
-        backgroundColor: '#FFFFFF',
-        color: '#333333', // TEXT_PRIMARY
+        backgroundColor: '#f8f9fa',
+        color: '#333333',
     },
     modalRow: {
         flexDirection: 'row',
@@ -838,117 +899,112 @@ const styles = StyleSheet.create({
     },
     pickerContainerModal: {
         borderWidth: 1,
-        borderColor: '#C0C0C0', // BORDER_MEDIUM
-        borderRadius: 8,
-        marginBottom: 20,
-        backgroundColor: '#FFFFFF',
-        justifyContent: 'center',
+        borderColor: '#E0E0E0',
+        borderRadius: 5,
+        marginBottom: 15,
+        backgroundColor: '#f8f9fa',
     },
     pickerStyleModal: {
-        width: '100%',
-        height: Platform.OS === 'ios' ? undefined : 50,
-        color: '#333333', // **Couleur pour valeur sélectionnée ET options Android**
+        color: '#333333',
     },
-    // *** Style spécifique pour les options du Picker (surtout iOS) ***
     pickerItemStyleModal: {
-        color: '#333333', // **Couleur explicite pour les options sur iOS**
-        // height: 120, // Décommenter si texte coupé sur iOS
-        // fontSize: 16 // Ajuster si besoin
+        color: '#333333',
     },
     modalButtonGroup: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginTop: 10,
     },
 
-    // --- Shopping List View Specific ---
-    dateRangeContainer: {
+    // --- Shopping List Styles ---
+    datePickerContainer: {
         flexDirection: 'row',
-        justifyContent: 'space-around',
         alignItems: 'center',
-        marginBottom: 15,
-        paddingVertical: 10,
+        justifyContent: 'space-between',
+        padding: 15,
         backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        paddingHorizontal: 10,
-        elevation: 2,
+        borderBottomWidth: 1,
+        borderBottomColor: '#E0E0E0',
     },
     datePickerGroup: {
-        alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
     },
-    dateLabel: {
+    datePickerLabel: {
         fontSize: 14,
         color: '#666666',
         marginBottom: 5,
     },
-    dateButton: {
-        borderWidth: 1,
-        borderColor: '#C0C0C0',
-        borderRadius: 6,
-        paddingVertical: 8,
-        paddingHorizontal: 12,
+    datePickerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: '#f8f9fa',
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+        borderRadius: 5,
+        padding: 8,
     },
-    dateButtonText: {
-        fontSize: 15,
+    datePickerButtonText: {
+        fontSize: 14,
         color: '#333333',
     },
     generateButton: {
-        backgroundColor: '#007A5E', // ACCENT_GREEN
-        paddingVertical: 14,
-        borderRadius: 8,
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
-        elevation: 2,
-    },
-    generateButtonDisabled: {
-        backgroundColor: '#a1a1a1',
+        justifyContent: 'center',
+        backgroundColor: '#007A5E',
+        borderRadius: 5,
+        padding: 10,
+        marginLeft: 5,
     },
     generateButtonText: {
         color: '#FFFFFF',
-        fontSize: 16,
+        fontSize: 14,
         fontWeight: 'bold',
     },
-    shoppingListTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333333',
-        textAlign: 'center',
-        marginVertical: 15,
-    },
-    shoppingListCategorySection: {
+    shoppingCategorySection: {
         marginBottom: 15,
-        backgroundColor: '#FFFFFF',
-        borderRadius: 8,
-        padding: 12,
-        elevation: 1,
+        paddingHorizontal: 15,
     },
-    shoppingListCategoryTitle: {
-        fontSize: 17,
+    shoppingCategoryTitle: {
+        fontSize: 18,
         fontWeight: 'bold',
-        color: '#007A5E',
         marginBottom: 10,
-        paddingBottom: 5,
+        color: '#333333',
         borderBottomWidth: 1,
         borderBottomColor: '#E0E0E0',
+        paddingBottom: 5,
     },
-    shoppingListItem: {
+    shoppingItem: {
+        backgroundColor: '#FFFFFF',
+        padding: 12,
+        borderRadius: 8,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: '#E0E0E0',
+    },
+    shoppingItemInfo: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        paddingVertical: 8,
-        borderBottomWidth: 1,
-        borderBottomColor: '#f0f0f0',
+        alignItems: 'center',
+        marginBottom: 5,
     },
     shoppingItemName: {
-        fontSize: 15,
+        fontSize: 16,
+        fontWeight: '500',
         color: '#333333',
-        flex: 1, // Allow text wrapping
-        marginRight: 10,
     },
     shoppingItemQuantity: {
-        fontSize: 15,
+        fontSize: 14,
+        fontWeight: 'bold',
+        color: '#007A5E',
+    },
+    shoppingItemSources: {
+        marginTop: 5,
+    },
+    shoppingItemSource: {
+        fontSize: 12,
         color: '#666666',
-        fontWeight: '500',
+        marginBottom: 2,
     },
 });
 
