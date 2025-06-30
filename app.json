@@ -24,6 +24,16 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+   "plugins": [
+      [
+        "expo-mail-composer",
+        {
+          "name": "Mail Composer",
+          "description": "Allows sending emails from the app"
+        }
+      ]
+    ]
   }
 }
+    
